@@ -38,7 +38,7 @@ def get_commands():
     state = controller_state()
     return json.dumps(
         {
-            "steering": int(deadzone(state.get("ABS_X",0))*0.011138916),
+            "steering": int(deadzone(state.get("ABS_X",0))*0.0030517578125),
             "speed": int(state.get("ABS_RZ",0)*0.392156863),
         }
     )
