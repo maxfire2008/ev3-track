@@ -7,7 +7,7 @@ app = flask.Flask(__name__)
 
 current_controller_state = {}
 
-def deadzone(value, deadzone=2048):
+def deadzone(value, deadzone=4096):
     if value < deadzone and value > -deadzone:
         return 0
     else:
