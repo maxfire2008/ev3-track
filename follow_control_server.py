@@ -1,5 +1,5 @@
 import ev3dev2.motor
-import json
+import requests
 
 COMMAND_SERVER = input("Enter the command server URL (without trailing slash): ")
 
