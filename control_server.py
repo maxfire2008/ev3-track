@@ -7,6 +7,12 @@ app = flask.Flask(__name__)
 
 current_controller_state = {}
 
+def deadzone(value, deadzone=2048):
+    if value < deadzone and value > -deadzone:
+        return 0
+    else:
+        return value
+
 def controller_state():
     start = time.time()
     global current_controller_state
@@ -26,6 +32,16 @@ def controller_state():
 @app.route("/CONTROLLER_STATE", methods=["GET"])
 def get_controller_state():
     return json.dumps(controller_state())
+
+@app.route("/commands", methods=["GET"])
+def get_commands():
+    state = controller_state()
+    return json.dumps(
+        {
+            "steering": deadzone(state.get("ABS_X",0))*0.00556954299,
+            "speed": state.get("ABS_RZ",0)*0.392156863,
+        }
+    )
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", debug=True)
