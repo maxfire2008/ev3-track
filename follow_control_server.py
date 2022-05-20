@@ -23,14 +23,14 @@ while True:
     s = time.time()
     try:
         # command = requests.get(COMMAND_SERVER+"/commands").json()
-        req = urllib.request.urlopen(COMMAND_SERVER+"/commands")
+        req = urllib.request.urlopen(COMMAND_SERVER+"/commands", timeout=30)
         command = json.loads(req.read().decode())
 
         steering_drive.on(command['steering'], command['speed'])
     except Exception as e:
         print(e)
         steering_drive.on(0,0)
-        time.sleep(10)
+        time.sleep(5)
     e = time.time()
     times.append((e-s))
     print("Command took:", (e-s) * 1000, "ms", "Average:", statistics.mean(times[-100:])*1000, "ms")
