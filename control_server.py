@@ -5,8 +5,11 @@ import time
 
 app = flask.Flask(__name__)
 
+app.jinja_options["autoescape"] = lambda _: True
+
 current_controller_state = {}
 
+latest_data = {}
 
 def deadzone(value, deadzone=4096):
     if value < deadzone and value > -deadzone:
@@ -27,21 +30,14 @@ def controller_state():
                 current_controller_state[event.code] = event.state
         else:
             break
-    print("Controller state updated in:", time.time() - start)
+    # print("Controller state updated in:", time.time() - start)
     # return current_controller_state
     return {i: current_controller_state[i] for i in sorted(current_controller_state)}
 
 
-@app.route("/CONTROLLER_STATE", methods=["GET"])
-def get_controller_state():
-    return json.dumps(controller_state())
-
-
-@app.route("/commands", methods=["GET"])
-def get_commands():
+def follow_controller(data=None):
     state = controller_state()
-    return json.dumps(
-        {
+    return {
             "steering": int(
                 (
                     100
@@ -75,7 +71,22 @@ def get_commands():
                 )
             ),
         }
-    )
+
+@app.route("/CONTROLLER_STATE", methods=["GET"])
+def get_controller_state():
+    return json.dumps(controller_state())
+
+
+@app.route("/commands", methods=["POST"])
+def get_commands():
+    for k in flask.request.json:
+        latest_data[k] = flask.request.json[k]
+    print(latest_data)
+    return json.dumps(follow_controller(latest_data))
+
+@app.route('/dashboard', methods=['GET'])
+def dashboard():
+    return flask.render_template('dashboard.html.j2', latest_data=latest_data, commands=follow_controller(latest_data))
 
 
 if __name__ == "__main__":
