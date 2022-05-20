@@ -79,6 +79,7 @@ def get_controller_state():
 
 @app.route("/commands", methods=["POST"])
 def get_commands():
+    print(flask.request.data)
     for k in flask.request.json:
         latest_data[k] = flask.request.json[k]
     print(latest_data)

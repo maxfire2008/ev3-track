@@ -12,3 +12,5 @@ $env:FLASK_APP="control_server:app"
 $env:FLASK_ENV="development"
 py -m flask run
 ```
+
+`https://ev3dev-lang-python.readthedocs.io/en/latest/rpyc.html`
