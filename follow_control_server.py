@@ -11,16 +11,16 @@ print("Created steering_drive")
 # print("Imported requests")
 import urllib.request
 print("Imported urllib.request")
-# import time
-# print("Imported time")
-# import statistics
-# print("Imported statistics")
+import time
+print("Imported time")
+import statistics
+print("Imported statistics")
 import json
 print("Imported json")
 
 times = []
 while True:
-    # s = time.time()
+    s = time.time()
     try:
         # command = requests.get(COMMAND_SERVER+"/commands").json()
         req = urllib.request.urlopen(COMMAND_SERVER+"/commands")
