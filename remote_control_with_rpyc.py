@@ -15,6 +15,12 @@ steering_drive = conn.modules.ev3dev2.motor.MoveSteering(
     conn.modules.ev3dev2.motor.OUTPUT_B, conn.modules.ev3dev2.motor.OUTPUT_A)
 
 
+class ControllerEvent:
+    def __init__(self, code, state):
+        self.code = code
+        self.state = state
+
+
 def deadzone(value, deadzone=4096):
     if value < deadzone and value > -deadzone:
         return 0
@@ -29,6 +35,7 @@ def snapzone(value, snapzone=95, snapto=100):
         return -snapto
     else:
         return value
+
 
 COLOURS = {
     "background": (255, 255, 255),
@@ -132,12 +139,48 @@ def get_speed(outputs):
     )
 
 
+def geo_fence(mouse_position, pos_x, pos_y, len_x, len_y):
+    if mouse_position[0] > pos_x and mouse_position[0] < pos_x + len_x and mouse_position[1] > pos_y and mouse_position[1] < pos_y + len_y:
+        return True
+    return False
+
+
 LAST_UPDATE = 0
+MOUSEDOWNON = None
+
 while True:
     try:
         events = inputs.devices.gamepads[0].read()
     except IndexError:
-        events = None
+        events = []
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            mouse_position = pygame.mouse.get_pos()
+            if geo_fence(mouse_position, 1160, 10, 100, 600):
+                MOUSEDOWNON = "speed"
+        elif event.type == pygame.MOUSEBUTTONUP:
+            if MOUSEDOWNON == "speed":
+                events.append(ControllerEvent("ABS_RZ", 0))
+            MOUSEDOWNON = None
+        if (event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEMOTION) and MOUSEDOWNON == "speed":
+            mouse_position = pygame.mouse.get_pos()
+            events.append(ControllerEvent("ABS_RZ", int(
+                limit(
+                    snapzone(
+                        deadzone(
+                            255-((mouse_position[1]-10)/(300/255)),
+                            deadzone=int(0.1*255),
+                        ),
+                        snapzone=int(0.95*255),
+                        snapto=255
+                    ),
+                    -255,
+                    255
+                )
+            )))
     if events:
         for event in events:
             print(event.code, event.state)
@@ -170,11 +213,6 @@ while True:
                 OUTPUTS["speed_influence"] += 1
             if event.code == "ABS_HAT0X" and event.state == -1:
                 OUTPUTS["speed_influence"] -= 1
-    # pygame events
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            pygame.quit()
-            exit()
 
     if time.time() - LAST_UPDATE > 0.05:
         if changed(["steering", "speed", "speed_influence", "steering_mode"]):
