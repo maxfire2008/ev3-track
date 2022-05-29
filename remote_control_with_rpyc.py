@@ -14,6 +14,10 @@ conn.modules["ev3dev2.motor"]
 steering_drive = conn.modules.ev3dev2.motor.MoveSteering(
     conn.modules.ev3dev2.motor.OUTPUT_B, conn.modules.ev3dev2.motor.OUTPUT_A)
 
+conn.modules["ev3dev2.sensor.lego"]
+conn.modules["ev3dev2.sensor"]
+sensor_colour_left = conn.modules.ev3dev2.sensor.lego.ColorSensor(conn.modules.ev3dev2.sensor.INPUT_1)
+sensor_colour_right = conn.modules.ev3dev2.sensor.lego.ColorSensor(conn.modules.ev3dev2.sensor.INPUT_4)
 
 class ControllerEvent:
     def __init__(self, code, state):
@@ -51,6 +55,12 @@ OUTPUTS = {
     "speed": 0,
     "speed_influence": 0,
     "steering_mode": 0,
+}
+
+LATEST_SENSORS = {
+    "colour_left": (0, 0, 0),
+    "colour_right": (0, 0, 0),
+    "ultrasonic": 0,
 }
 
 OUTPUTS_PREVIOUS = OUTPUTS.copy()
@@ -149,38 +159,42 @@ LAST_UPDATE = 0
 MOUSEDOWNON = None
 
 while True:
+    events = []
     try:
-        events = inputs.devices.gamepads[0].read()
+        events_read = inputs.devices.gamepads[0].read()
+        while events_read:
+            events += events_read
+            events_read = inputs.devices.gamepads[0].read()
     except IndexError:
-        events = []
+        pass
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             pygame.quit()
             exit()
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            mouse_position = pygame.mouse.get_pos()
-            if geo_fence(mouse_position, 1160, 10, 100, 600):
-                MOUSEDOWNON = "speed"
-        elif event.type == pygame.MOUSEBUTTONUP:
-            if MOUSEDOWNON == "speed":
-                events.append(ControllerEvent("ABS_RZ", 0))
-            MOUSEDOWNON = None
-        if (event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEMOTION) and MOUSEDOWNON == "speed":
-            mouse_position = pygame.mouse.get_pos()
-            events.append(ControllerEvent("ABS_RZ", int(
-                limit(
-                    snapzone(
-                        deadzone(
-                            255-((mouse_position[1]-10)/(300/255)),
-                            deadzone=int(0.1*255),
-                        ),
-                        snapzone=int(0.95*255),
-                        snapto=255
-                    ),
-                    -255,
-                    255
-                )
-            )))
+        # if event.type == pygame.MOUSEBUTTONDOWN:
+        #     mouse_position = pygame.mouse.get_pos()
+        #     if geo_fence(mouse_position, 1160, 10, 100, 600):
+        #         MOUSEDOWNON = "speed"
+        # elif event.type == pygame.MOUSEBUTTONUP:
+        #     if MOUSEDOWNON == "speed":
+        #         events.append(ControllerEvent("ABS_RZ", 0))
+        #     MOUSEDOWNON = None
+        # if (event.type == pygame.MOUSEBUTTONDOWN or event.type == pygame.MOUSEMOTION) and MOUSEDOWNON == "speed":
+        #     mouse_position = pygame.mouse.get_pos()
+        #     events.append(ControllerEvent("ABS_RZ", int(
+        #         limit(
+        #             snapzone(
+        #                 deadzone(
+        #                     255-((mouse_position[1]-10)/(300/255)),
+        #                     deadzone=int(0.1*255),
+        #                 ),
+        #                 snapzone=int(0.95*255),
+        #                 snapto=255
+        #             ),
+        #             -255,
+        #             255
+        #         )
+        #     )))
     if events:
         for event in events:
             print(event.code, event.state)
@@ -213,6 +227,9 @@ while True:
                 OUTPUTS["speed_influence"] += 1
             if event.code == "ABS_HAT0X" and event.state == -1:
                 OUTPUTS["speed_influence"] -= 1
+
+    LATEST_SENSORS["colour_left"] = sensor_colour_left.raw
+    LATEST_SENSORS["colour_right"] = sensor_colour_right.raw
 
     if time.time() - LAST_UPDATE > 0.05:
         if changed(["steering", "speed", "speed_influence", "steering_mode"]):
@@ -311,5 +328,22 @@ while True:
                 (-OUTPUTS.get("speed", 0))*(300/100)
             )
         )
+
+    # draw circle for colour_left
+    pygame.draw.circle(
+        screen,
+        [max(i, 255) for i in LATEST_SENSORS["colour_left"]],
+        (1160, 300),
+        10,
+        0
+    )
+    # draw circle for colour_right
+    pygame.draw.circle(
+        screen,
+        [max(i/1020, 255) for i in LATEST_SENSORS["colour_right"]],
+        (1160, 500),
+        10,
+        0
+    )
 
     pygame.display.flip()
